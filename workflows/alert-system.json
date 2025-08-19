@@ -1,0 +1,362 @@
+{
+  "name": "alert-system",
+  "nodes": [
+    {
+      "parameters": {
+        "sendTo": "marksonjade@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $('payementalert').item.json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        8540,
+        -800
+      ],
+      "id": "0e7ae90e-6669-42aa-bf12-b6e7936faa10",
+      "name": "Send a message1",
+      "webhookId": "63d0e950-9568-4380-96d6-084ba1c13581",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1ln0gj9ATTlTrRdy",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8",
+          "mode": "list",
+          "cachedResultName": "factures_test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status_paiement",
+              "lookupValue": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        7540,
+        -780
+      ],
+      "id": "8e92a6f0-bb44-4f3d-80e6-d23b06986772",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3BA8KtbrkLYj5HVy",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8,
+              "triggerAtMinute": null
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        7160,
+        -840
+      ],
+      "id": "077d71d0-8ea6-4a40-9535-9f38e3ed7a49",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date();\ntoday.setHours(0, 0, 0, 0); // Normalize to start of day\nconst DELAI_PAIEMENT = 30; // Default 30-day payment term\nconst JOURS_ALERTE = 5; // Alert 5 days before due date\n\nreturn $input.all().map(item => {\n  try {\n    // 1. Validate required fields\n    if (!item.json.date_facturation) {\n      throw new Error(\"Missing date_facturation\");\n    }\n\n    // 2. Parse invoice date (facturation)\n    const dateFacturation = new Date(item.json.date_facturation);\n    if (isNaN(dateFacturation.getTime())) {\n      throw new Error(`Invalid date_facturation: ${item.json.date_facturation}`);\n    }\n    dateFacturation.setHours(0, 0, 0, 0); // Normalize\n\n    // 3. Determine reference date\n    let dateReference;\n    if (item.json.date_echeance) {\n      dateReference = new Date(item.json.date_echeance);\n      if (isNaN(dateReference.getTime())) {\n        throw new Error(`Invalid date_d_echeance: ${item.json.date_echeance}`);\n      }\n    } else {\n      dateReference = new Date(dateFacturation);\n      dateReference.setDate(dateReference.getDate() + DELAI_PAIEMENT);\n    }\n    dateReference.setHours(0, 0, 0, 0); // Normalize\n\n    // 4. Calculate days remaining\n    const diffDays = Math.floor((dateReference - today) / (1000 * 60 * 60 * 24));\n\n    // 5. Prepare output\n    const result = {\n      json: {\n        // Original data\n        ...item.json,\n        \n        // Calculated fields\n        date_reference: dateReference.toISOString().split('T')[0],\n        jours_restants: diffDays,\n        \n        // Debug information\n        _debug: {\n          today: today.toISOString().split('T')[0],\n          used_date_echeance: !!item.json.date_echeance,\n          calculation: item.json.date_echeance ? \n            \"Used provided date_echeance\" : \n            `Calculated (date_facturation + ${DELAI_PAIEMENT} days)`\n        }\n      }\n    };\n\n    // 6. Add alert status if needed\n    if (diffDays < 0) {\n      result.json.status_paiement = true;\n    } else if (diffDays <= JOURS_ALERTE) {\n      result.json.alerte = `À PAYER DANS ${diffDays} JOURS`;\n      result.json.notification = true;\n    }\n\n    return result;\n\n  } catch (error) {\n    return {\n      json: {\n        error: error.message,\n        input_data: item.json,\n        _error_details: {\n          date_facturation: item.json.date_facturation,\n          date_echeance: item.json.date_echeance,\n          today: today.toISOString()\n        }\n      }\n    };\n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7840,
+        -820
+      ],
+      "id": "fedee1bd-200f-4659-acd9-c96209468d68",
+      "name": "dateverification"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrer les factures concernées par l’alerte\nconst factures = $input.all()\n  .filter(item =>\n    item.json.status_paiement === false &&\n    item.json.jours_restants <= 3\n  )\n  .map(item => {\n    const color = item.json.jours_restants <= 1 ? \"#d9534f\" : \"#f0ad4e\"; // rouge si urgent\n\n    return {\n      html: `\n      <div style=\"margin-bottom: 15px; padding: 10px; border-left: 4px solid ${color};\">\n        <strong>${item.json.fournisseur_nom}</strong> (${item.json.facture_numero})<br>\n        <span style=\"color: #777;\">Échéance : ${item.json.date_reference} (${item.json.jours_restants} jours)</span><br>\n        <span style=\"font-weight: bold;\">${item.json.total_ttc} dhs</span>\n      </div>\n      `,\n      ...item.json\n    };\n  });\n\n// Combine all items into one HTML string\nconst itemsHtml = factures.map(f => f.html).join('');\n\nreturn [{\n  json: {\n    subject: `Alertes Paiement - ${factures.length} à traiter`,\n    body: `\n    <div style=\"font-family: Arial; color: #333;\">\n      <h2 style=\"color: #d9534f;\">Alertes Paiement</h2>\n      ${factures.length === 0 ? '<p>Aucune facture urgente à traiter.</p>' : itemsHtml}\n    </div>\n    `,\n    factures \n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8300,
+        -780
+      ],
+      "id": "696236e5-e370-4f89-88d9-aee25d42defe",
+      "name": "payementalert"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8",
+          "mode": "list",
+          "cachedResultName": "factures_test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "status_paiement": "={{ $json.status_paiement }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "facture_numero",
+              "displayName": "facture_numero",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fournisseur_nom",
+              "displayName": "fournisseur_nom",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fournisseur_ice",
+              "displayName": "fournisseur_ice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fournisseur_email",
+              "displayName": "fournisseur_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "client_nom",
+              "displayName": "client_nom",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "client_ice",
+              "displayName": "client_ice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "total_ht",
+              "displayName": "total_ht",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "rib",
+              "displayName": "rib",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "date_facturation",
+              "displayName": "date_facturation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "date_echeance",
+              "displayName": "date_echeance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "date_de_réception",
+              "displayName": "date_de_réception",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status_paiement",
+              "displayName": "status_paiement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        8220,
+        -1000
+      ],
+      "id": "d3c9215e-0a2a-4fb0-87ee-b3c59b2145a7",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3BA8KtbrkLYj5HVy",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "dateverification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dateverification": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "payementalert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "payementalert": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c5eae9c9-a6e8-4e53-920a-1afb44c41ce0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "06c7a68a8d81ecd4406854094919ab699bf2c4fab2920df5e9355fbb2943f752"
+  },
+  "id": "caZNCwpf0IBwrb4n",
+  "tags": []
+}

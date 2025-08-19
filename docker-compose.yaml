@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  n8n:
+    container_name: n8n-container
+    build:
+      context: ./n8n
+      dockerfile: Dockerfile.n8n
+    restart: unless-stopped
+    user: node
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - n8n-network
+    entrypoint: ["tini", "--", "/docker-entrypoint.sh"]
+    environment:
+      - NODE_ENV=production
+      - N8N_RELEASE_TYPE=stable
+      - GENERIC_TIMEZONE=Africa/Casablanca
+    depends_on:
+      - rabbitmq
+
+  ocr-app:
+    build:
+      context: ./ocr-app
+      dockerfile: Dockerfile.ocr
+    container_name: ocr-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - n8n-network
+    mem_limit: 700m
+    cpus: 0.5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - n8n-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=unmotdepassefortetunique
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    mem_limit: 500m
+    cpus: 0.5
+
+networks:
+  n8n-network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+  rabbitmq_data:
