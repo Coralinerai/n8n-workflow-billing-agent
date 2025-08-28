@@ -30,7 +30,15 @@ Ces ressources appartiennent à un compte Google personnel.
 - les `documentId` et `sheetName` dans les nœuds Google Sheets
 
 ---
+🐇 RabbitMQ
 
+Le workflow utilise RabbitMQ pour la gestion des tâches.
+
+➡️ À faire côté utilisateur :
+
+Créer une queue RabbitMQ nommée factures_à_traiter
+
+Vérifier que les credentials et la connexion RabbitMQ sont correctement configurés dans N8N
 
 ##  Fichier JSON du workflow
 
