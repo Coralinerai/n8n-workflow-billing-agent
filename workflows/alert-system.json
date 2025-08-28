@@ -3,77 +3,11 @@
   "nodes": [
     {
       "parameters": {
-        "sendTo": "marksonjade@gmail.com",
-        "subject": "={{ $json.subject }}",
-        "message": "={{ $('payementalert').item.json.body }}",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        8540,
-        -800
-      ],
-      "id": "0e7ae90e-6669-42aa-bf12-b6e7936faa10",
-      "name": "Send a message1",
-      "webhookId": "63d0e950-9568-4380-96d6-084ba1c13581",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "1ln0gj9ATTlTrRdy",
-          "name": "Gmail account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8",
-          "mode": "list",
-          "cachedResultName": "factures_test",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit?usp=drivesdk"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit#gid=0"
-        },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "status_paiement",
-              "lookupValue": "false"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.6,
-      "position": [
-        7540,
-        -780
-      ],
-      "id": "8e92a6f0-bb44-4f3d-80e6-d23b06986772",
-      "name": "Get row(s) in sheet",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "3BA8KtbrkLYj5HVy",
-          "name": "Google Sheets account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "rule": {
           "interval": [
             {
               "triggerAtHour": 8,
-              "triggerAtMinute": null
+              "triggerAtMinute": {}
             }
           ]
         }
@@ -289,26 +223,81 @@
           "name": "Google Sheets account 2"
         }
       }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('get').item.json.récepteur }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $('payementalert').item.json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        8540,
+        -800
+      ],
+      "id": "0e7ae90e-6669-42aa-bf12-b6e7936faa10",
+      "name": "Send a message",
+      "webhookId": "63d0e950-9568-4380-96d6-084ba1c13581",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1ln0gj9ATTlTrRdy",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8",
+          "mode": "list",
+          "cachedResultName": "factures_test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1u8en2pmo1FY0xqljDNan9uOyjK6Dss7gqMcN7sbWRt8/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status_paiement",
+              "lookupValue": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        7540,
+        -780
+      ],
+      "id": "8e92a6f0-bb44-4f3d-80e6-d23b06986772",
+      "name": "get",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "3BA8KtbrkLYj5HVy",
+          "name": "Google Sheets account 2"
+        }
+      }
     }
   ],
   "pinData": {},
   "connections": {
-    "Get row(s) in sheet": {
-      "main": [
-        [
-          {
-            "node": "dateverification",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Schedule Trigger": {
       "main": [
         [
           {
-            "node": "Get row(s) in sheet",
+            "node": "get",
             "type": "main",
             "index": 0
           }
@@ -335,7 +324,7 @@
       "main": [
         [
           {
-            "node": "Send a message1",
+            "node": "Send a message",
             "type": "main",
             "index": 0
           }
@@ -346,13 +335,24 @@
       "main": [
         []
       ]
+    },
+    "get": {
+      "main": [
+        [
+          {
+            "node": "dateverification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "c5eae9c9-a6e8-4e53-920a-1afb44c41ce0",
+  "versionId": "23256760-143b-429f-aca8-3fabe700a0ee",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "06c7a68a8d81ecd4406854094919ab699bf2c4fab2920df5e9355fbb2943f752"
